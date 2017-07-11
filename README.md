@@ -85,7 +85,7 @@ A new Git commit will be created and merged if necessary. The response will cont
 
 ```bash
 npm install
-REPO_URI=<repo-url> npm run watch
+env REPO_URI=<repo-url> npm run watch
 ```
 
 ## Deployment
