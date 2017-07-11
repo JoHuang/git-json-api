@@ -3,6 +3,7 @@
   "rules": {
     "func-names": "off",
     "import/no-commonjs": "off",
+    "no-console": "off",
     "no-use-before-define": "off"
   }
 }
