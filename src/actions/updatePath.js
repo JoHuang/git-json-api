@@ -1,44 +1,43 @@
-const co = require("co")
 const Git = require("nodegit")
 
 const { getSchema, isFile, response } = require("./helpers")
 
-module.exports = co.wrap(function* updatePath(repo, params, data) {
+module.exports = async function updatePath(repo, params, data) {
   const version = params.version
   const path = params[0]
 
-  const masterCommit = yield repo.getMasterCommit()
-  const parentCommit = yield repo.getCommit(version)
+  const masterCommit = await repo.getMasterCommit()
+  const parentCommit = await repo.getCommit(version)
 
-  const parentTree = yield parentCommit.getTree()
-  const newTree = yield createNewTree(repo, parentTree, data, path)
-  const diff = yield Git.Diff.treeToTree(repo, parentTree, newTree)
+  const parentTree = await parentCommit.getTree()
+  const newTree = await createNewTree(repo, parentTree, data, path)
+  const diff = await Git.Diff.treeToTree(repo, parentTree, newTree)
 
   if (diff.numDeltas() === 0) {
     return response(version)
   } else {
-    const newOid = yield createCommit(repo, parentCommit, masterCommit, newTree, `Update ${path}`)
-    yield pushToOrigin(repo)
+    const newOid = await createCommit(repo, parentCommit, masterCommit, newTree, `Update ${path}`)
+    await pushToOrigin(repo)
     return response(newOid.toString())
   }
-})
+}
 
-const createNewTree = co.wrap(function*(repo, parentTree, data, path) {
-  const schema = yield getSchema(parentTree)
-  const newSubTreeOid = yield objectToTree(data, path, repo, schema)
+const createNewTree = async function(repo, parentTree, data, path) {
+  const schema = await getSchema(parentTree)
+  const newSubTreeOid = await objectToTree(data, path, repo, schema)
 
-  const builder = yield Git.Treebuilder.create(repo, parentTree)
+  const builder = await Git.Treebuilder.create(repo, parentTree)
   builder.remove(path)
-  yield builder.insert(path, newSubTreeOid, Git.TreeEntry.FILEMODE.TREE)
+  await builder.insert(path, newSubTreeOid, Git.TreeEntry.FILEMODE.TREE)
   const newTreeOid = builder.write()
-  return yield Git.Tree.lookup(repo, newTreeOid)
-})
+  return await Git.Tree.lookup(repo, newTreeOid)
+}
 
-const createCommit = co.wrap(function*(repo, parentCommit, masterCommit, tree, message) {
+const createCommit = async function(repo, parentCommit, masterCommit, tree, message) {
   const signature = createSignature()
 
   if (parentCommit.sha() === masterCommit.sha()) {
-    return yield repo.createCommit(
+    return await repo.createCommit(
       "refs/heads/master",
       signature,
       signature,
@@ -47,7 +46,7 @@ const createCommit = co.wrap(function*(repo, parentCommit, masterCommit, tree, m
       [parentCommit]
     )
   } else {
-    const commitOid = yield repo.createCommit(
+    const commitOid = await repo.createCommit(
       null,
       signature,
       signature,
@@ -56,16 +55,16 @@ const createCommit = co.wrap(function*(repo, parentCommit, masterCommit, tree, m
       [parentCommit]
     )
 
-    const commit = yield repo.getCommit(commitOid)
-    const index = yield Git.Merge.commits(repo, masterCommit, commit)
+    const commit = await repo.getCommit(commitOid)
+    const index = await Git.Merge.commits(repo, masterCommit, commit)
 
     if (index.hasConflicts()) {
       throw new Error("Merge conflict")
     }
 
-    const mergeTreeOid = yield index.writeTreeTo(repo)
+    const mergeTreeOid = await index.writeTreeTo(repo)
 
-    return yield repo.createCommit(
+    return await repo.createCommit(
       "refs/heads/master",
       signature,
       signature,
@@ -74,7 +73,7 @@ const createCommit = co.wrap(function*(repo, parentCommit, masterCommit, tree, m
       [masterCommit, commit]
     )
   }
-})
+}
 
 function createSignature() {
   return Git.Signature.now(
@@ -83,8 +82,8 @@ function createSignature() {
   )
 }
 
-const objectToTree = co.wrap(function*(object, path, repo, schema) {
-  const builder = yield Git.Treebuilder.create(repo, null)
+const objectToTree = async function(object, path, repo, schema) {
+  const builder = await Git.Treebuilder.create(repo, null)
 
   for (const key of Object.keys(object)) {
     const childPath = `${path}/${key}`
@@ -92,21 +91,21 @@ const objectToTree = co.wrap(function*(object, path, repo, schema) {
     if (isFile(childPath, schema.files)) {
       const buffer = new Buffer(`${JSON.stringify(object[key], null, 2)}\n`)
       const blobOid = Git.Blob.createFromBuffer(repo, buffer, buffer.length)
-      yield builder.insert(`${key}.json`, blobOid, Git.TreeEntry.FILEMODE.BLOB)
+      await builder.insert(`${key}.json`, blobOid, Git.TreeEntry.FILEMODE.BLOB)
     } else {
-      const subTreeOid = yield objectToTree(object[key], childPath, repo, schema)
-      yield builder.insert(key, subTreeOid, Git.TreeEntry.FILEMODE.TREE)
+      const subTreeOid = await objectToTree(object[key], childPath, repo, schema)
+      await builder.insert(key, subTreeOid, Git.TreeEntry.FILEMODE.TREE)
     }
   }
 
   return builder.write()
-})
+}
 
-const pushToOrigin = co.wrap(function*(repo) {
-  const remote = yield repo.getRemote("origin")
-  const errorCode = yield remote.push("refs/heads/master:refs/heads/master")
+const pushToOrigin = async function(repo) {
+  const remote = await repo.getRemote("origin")
+  const errorCode = await remote.push("refs/heads/master:refs/heads/master")
 
   if (errorCode) {
     throw new Error(errorCode)
   }
-})
+}
