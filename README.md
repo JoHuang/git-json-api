@@ -90,4 +90,4 @@ env REPO_URI=<repo-url> npm run watch
 
 ## Deployment
 
-A Docker container is available at [artcom/git-json-api](https://hub.docker.com/r/artcom/git-json-api/). Using the Dockerfile, the service can also be deployed using [Dokku](http://dokku.viewdocs.io/dokku/).
+A Docker container is available at [artcom/git-json-api](https://hub.docker.com/r/artcom/git-json-api/). Using the `Dockerfile`, the service can also be deployed using [Dokku](http://dokku.viewdocs.io/dokku/).
