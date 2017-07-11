@@ -90,6 +90,4 @@ env REPO_URI=<repo-url> npm run watch
 
 ## Deployment
 
-The service is designed to be deployed using [Dokku](http://dokku.viewdocs.io/dokku/) and will probably also work with [Heroku](https://www.heroku.com/) and other compatible platforms.
-
-**NOTE:** Installing the `nodegit` dependency on Dokku requires some tweaking, namely setting the environment variables `BUILD_ONLY=true` and `NPM_CONFIG_PRODUCTION=false`.
+A Docker container is available at [artcom/git-json-api](https://hub.docker.com/r/artcom/git-json-api/). Using the Dockerfile, the service can also be deployed using [Dokku](http://dokku.viewdocs.io/dokku/).
